@@ -9,3 +9,6 @@ clean:
 
 gotest:
 	go test -cover -v ./...
+
+docker:build
+	docker build -t redis-port   .

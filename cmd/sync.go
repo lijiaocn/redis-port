@@ -12,6 +12,9 @@ import (
 	"net"
 	"os"
 	"time"
+	"net/http"
+	"encoding/json"
+	"bytes"
 
 	"github.com/wandoulabs/redis-port/pkg/libs/atomic2"
 	"github.com/wandoulabs/redis-port/pkg/libs/io/pipe"
@@ -235,6 +238,31 @@ func (cmd *cmdSync) SyncRDBFile(reader *bufio.Reader, target, passwd string, nsi
 		log.Info(b.String())
 	}
 	log.Info("sync rdb done")
+	if len(args.notify) != 0{
+		dat,err := json.Marshal(curTask)
+		if err != nil{
+			log.Info(err)
+		}
+		go func(){
+			var ok bool
+			ok = false
+			for ok == false{
+				resp, err := http.Post(args.notify, "application/json", bytes.NewReader(dat))
+				if err != nil {
+					log.Info(err)
+					time.Sleep(2 * time.Second)
+					continue
+				}else{
+					ok = true
+					log.Info("notify ok")
+				}
+				if resp.StatusCode != 200{
+					log.Error("args.notify: %s  post: %s\n", resp.Status, bytes)
+					ok = true
+				}
+			}
+		}()
+	}
 }
 
 func (cmd *cmdSync) SyncCommand(reader *bufio.Reader, target, passwd string) {
